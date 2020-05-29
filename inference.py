@@ -32,66 +32,61 @@ class Network:
     """
     def __init__(self):
         ### TODO: Initialize any class variables desired ###
-        self.net = None
         self.plugin = None
+        self.network = None
         self.input_blob = None
-        self.out_blob = None
-        self.net_plugin = None
-        self.infer_request_handle = None
+        self.output_blob = None
+        self.exec_net = None
+        self.infer_request = None
 
-    def load_model(self, model, device, input_size, output_size, num_requests, extn=None):
+    def load_model(self, model, device="CPU", cpu_extension=None):
         ### TODO: Load the model ###
         model_xml = model
         model_bin = os.path.splitext(model_xml)[0] + ".bin"
-        
-        log.info("Creating Inference Engine")
+
         self.plugin = IECore()
-        if extn and 'CPU' in device:
-            self.plugin.add_extension(extn, "CPU")
+        if cpu_extension and 'CPU' in device:
+            self.plugin.add_extension(cpu_extension, "CPU")
                    
         # Read IR
-        log.info("Reading IR")
         ### TODO: Check for supported layers ###
-        self.net = IENetwork(model=model_xml, weights=model_bin)
+        self.network = IENetwork(model=model_xml, weights=model_bin)
             
         if "CPU" in device:
-            supported_layers = self.plugin.query_network(self.net, "CPU")
-            not_supported_layers = [l for l in self.net.layers.keys() if l not in supported_layers]
-            if len(not_supported_layers) != 0:
+            supported_layers = self.plugin.query_network(self.network, "CPU")
+            unsupported_layers = [l for l in self.network.layers.keys() if l not in supported_layers]
+            if len(unsupported_layers) != 0:
                 print("Unsupported layers found: {}".format(unsupported_layers))
                 print("Check whether extensions are available to add to IECore.")
-                sys.exit(1)        
+                exit(1)        
         ### TODO: Add any necessary extensions ###    
-        if num_requests == 0:
-            self.net_plugin = self.plugin.load_network(network=self.net, device_name=device)
+        if True:
+            self.exec_net = self.plugin.load_network(network=self.network, device_name=device)
         else:
-            self.net_plugin = self.plugin.load_network(network=self.net, device_name=device, num_requests=num_requests)
+            self.exec_net = self.plugin.load_network(network=self.network, device_name=device)
         ### TODO: Return the loaded inference plugin ###
-        self.input_blob = next(iter(self.net.inputs))
-        self.out_blob = next(iter(self.net.outputs))
-        assert len(self.net.inputs.keys()) == input_size, \
-            "Supports only {} input topologies".format(len(self.net.inputs))
-        assert len(self.net.outputs) == output_size, \
-            "Supports only {} output topologies".format(len(self.net.outputs))
+        self.input_blob = next(iter(self.network.inputs))
+        self.out_blob = next(iter(self.network.outputs))
+        
         ### Note: You may need to update the function parameters. ###
-        return self.plugin, self.get_input_shape()
+        return self.plugin
 
 
     def get_input_shape(self):
         ### TODO: Return the shape of the input layer ###
         return self.net.inputs[self.input_blob].shape
 
-    def exec_net(self, request_id, frame):
+    def async_inference(self, request_id, frame):
         ### TODO: Start an asynchronous request ###
-        self.infer_request_handle = self.net_plugin.start_async(request_id=request_id, inputs={self.input_blob: frame})
+        self.infer_request = self.exec_net.start_async(request_id=request_id, inputs={self.input_blob: frame})
         ### TODO: Return any necessary information ###
         ### Note: You may need to update the function parameters. ###
-        return self.net_plugin
+        return self.exec_net
 
 
     def wait(self, request_id):
         ### TODO: Wait for the request to be complete. ###
-        status = self.net_plugin.requests[request_id].wait(-1)
+        status = self.exec_net.requests[request_id].wait(-1)
         ### TODO: Return any necessary information ###
         ### Note: You may need to update the function parameters. ###
         return status
@@ -99,12 +94,10 @@ class Network:
     def get_output(self, request_id, output=None):
         ### TODO: Extract and return the output results
         if output:
-            res = self.infer_request_handle.outputs[output]
+            res = self.infer_request.outputs[output]
         else:
-            res = self.net_plugin.requests[request_id].outputs[self.out_blob]
+            res = self.exec_net.requests[request_id].outputs[self.output_blob]
             ### Note: You may need to update the function parameters. ###
         return res
 
-    def clean(self):
-        del self.net_plugin
-        del self.net
+   
