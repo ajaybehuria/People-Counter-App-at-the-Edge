@@ -6,20 +6,19 @@ questions.
 
 ## Explaining Custom Layers
 
-The process behind converting custom layers involves many different options for the user. The easiest way to convert custom layers in the model optimizer is to add them as extensions. Depeding on model type, theres many other options as well for custom layer support.
+The process behind converting custom layers mainly involves using an extension template to execute custom layers within a model. First, you have to generate the Extension Template Files. This can be done with the model extension generator. Then, you must create an IR File which contains the customer layer which can be done with the model optimizer. After that, edit the CPU extension and you can run your model. This worked for me.
 
-Some of the potential reasons for handling custom layers are the various uses of them. Custom layers can be an essential part of your model because of how much they may add to it. Not taking care of custom layers makes your model somewhat incomplete as it has unsupported layers.
+Custom layers in a model can be vital, as they can help models operate at a higher level of abstraction. They pose various benefits in contrast to not having them. It is worth the additional effort as they can be perfect built to fit any situation.
 
 ## Comparing Model Performance
 
-My method(s) to compare models before and after conversion to Intermediate Representations
-were trial and error. I used the TensorFlow Model Zoo, so I had many available models with statistics available. 
+My method(s) to compare models before and after conversion to Intermediate Representations were through trial and error. First I got each model using wget from the Tensorflow model zoo. Then using tar I extracted the contents. From here, you can do initial tests and take measurements. Then use the model optimizer for conversion. After that you can take more measurements for post-conversion. 
 
-The difference between model accuracy pre- and post-conversion was more noticable than I thought. The model optimizer definitely made a difference. I have used these models in the past and can see improvement with the model optimizer. Clearing up unnecessary aspects was more effective than I thought.
+The difference between model accuracy pre- and post-conversion was that the post-conversion model had trouble tracking moving people rather than idle people. This wasn't too big of a deal for the pre-conversion model.
 
-The size of the model pre- and post-conversion was also significant. The pre-conversion model was never too big of a problem, but the optimizer did have an impact and the post-conversion model is definitely preferable.
+The size of the model pre- and post-conversion wasn't too different. The size of the .pb file was 19MB while the size of the .bin file was 18MB. So there is a 1MB difference after conversion
 
-The inference time of the model pre- and post-conversion was crucial. Time difference between the pre- and post- conversion was the best part of the Model Optimizer. It increases speed by a hefty margin with my model. I believe this to be the most important feature of the model optimizer.
+The inference time of the model pre- and post-conversion also was very similar. The inference time for the converted model was around 30-31 ms. For the .pb file it was around the same speed give or take a few. 
 
 ## Assess Model Use Cases
 
@@ -33,26 +32,20 @@ Lighting, model accuracy, and camera focal length/image size have different effe
 deployed edge model. The potential effects of each of these are as follows, they can severely affect statistics. If the model provides incorrect data, it could throw all the benefits or all the plans you had for the model out the window. 
 ## Model Research
 
-[This heading is only required if a suitable model was not found after trying out at least three
-different models. However, you may also use this heading to detail how you converted 
-a successful model.]
+Using the model optimizer I successfully converted this Tensorflow model
 
-In investigating potential people counter models, I tried each of the following three models:
+In investigating potential people counter models, I tried out different models to which I found the most effective one
 
-- Model 1: [Name]
-  - [Model Source]
-  - I converted the model to an Intermediate Representation with the following arguments...
-  - The model was insufficient for the app because...
-  - I tried to improve the model for the app by...
+
+
+- Model: SSD Lite MobileNet V2 Coco Tensorflow Model  http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz 
+  - I obtained the model by using the wget function with the link above to obtain the tar folder
   
-- Model 2: [Name]
-  - [Model Source]
-  - I converted the model to an Intermediate Representation with the following arguments...
-  - The model was insufficient for the app because...
-  - I tried to improve the model for the app by...
-
-- Model 3: [Name]
-  - [Model Source]
-  - I converted the model to an Intermediate Representation with the following arguments...
-  - The model was insufficient for the app because...
-  - I tried to improve the model for the app by...
+  - Then to extract contents I used tar-xvf
+  
+  - I converted the model to an Intermediate Representation with the following arguments python /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --input_model frozen_inference_graph.pb --tensorflow_object_detection_api_pipeline_config pipeline.config --reverse_input_channels --tensorflow_use_custom_operations_config
+  
+  - The model was insufficient for the app because of the unsupported layers, it also sometimes double-counted due to the limited accuracy
+  
+  - I tried to improve the model for the app by decreasing the confidence threshold which definietly improved the result and made the statistics more accurate
+  
