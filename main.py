@@ -97,7 +97,7 @@ def infer_on_stream(args, client):
     :return: None
     """
     # Initialise the class
-    plugin = Network()
+    infer_network = Network()
     # Set Probability threshold for detections
     model=args.model
     video_file=args.input    
@@ -113,7 +113,7 @@ def infer_on_stream(args, client):
     total_count = 0
     
     # Load the model through `infer_network` 
-    n, c, h, w = plugin.load_model(model, device, extension)[1]
+    n, c, h, w = infer_network.load_model(model, device", extension)[1]
 
     # Handle the input stream
     if video_file == 'CAM': # Check for live feed
