@@ -74,9 +74,8 @@ def connect_mqtt():
     client.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEPALIVE_INTERVAL)
     return client
 
-def draw_outputs(coords, frame, initial_w, initial_h, x, k):
+def draw_outputs(frame, result):
         current_count = 0     
-        ed = x
         for obj in coords[0][0]:
             
             if obj[2] > prob_threshold:
@@ -86,27 +85,7 @@ def draw_outputs(coords, frame, initial_w, initial_h, x, k):
                 ymax = int(obj[6] * initial_h)
                 cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
                 current_count = current_count + 1
-                #print(current_count)
-                
-                c_x = frame.shape[1]/2
-                c_y = frame.shape[0]/2    
-                mid_x = (xmax + xmin)/2
-                mid_y = (ymax + ymin)/2
-                
-                # Calculating distance 
-                ed =  math.sqrt(math.pow(mid_x - c_x, 2) +  math.pow(mid_y - c_y, 2) * 1.0) 
-                k = 0
-
-        if current_count < 1:
-            k += 1
-            
-        if ed>0 and k < 10:
-            current_count = 1 
-            k += 1 
-            if k > 100:
-                k = 0
-                
-        return frame, current_count, ed, k
+        return frame, current_count
 
 def infer_on_stream(args, client):
     """
@@ -118,13 +97,12 @@ def infer_on_stream(args, client):
     :return: None
     """
     # Initialise the class
-    infer_network = Network()
+    plugin = Network()
     # Set Probability threshold for detections
     model=args.model
     video_file=args.input    
-    extn=args.cpu_extension
+    extension=args.cpu_extension
     device=args.device
-    #prob_threshold = args.prob_threshold
     
     # Flag for the input image
     single_img_flag = False
@@ -135,7 +113,7 @@ def infer_on_stream(args, client):
     total_count = 0
     
     # Load the model through `infer_network` 
-    n, c, h, w = infer_network.load_model(model, device, 1, 1, cur_request_id, extn)[1]
+    n, c, h, w = plugin.load_model(model, device, extension)[1]
 
     # Handle the input stream
     if video_file == 'CAM': # Check for live feed
@@ -143,28 +121,20 @@ def infer_on_stream(args, client):
 
     elif video_file.endswith('.jpg') or video_file.endswith('.bmp') :    # Check for input image
         single_img_flag = True
-        input_stream = video_file
+        input_stream = args.input
 
     else:     # Check for video file
-        input_stream = video_file
+        input_stream = args.input
         assert os.path.isfile(video_file), "Specified input file doesn't exist"
     
-    try:
-        cap=cv2.VideoCapture(video_file)
-    except FileNotFoundError:
-        print("Cannot locate video file: "+ video_file)
-    except Exception as e:
-        print("Something else went wrong with the video file: ", e)
         
-    global initial_w, initial_h, prob_threshold
     total_count = 0  
     duration = 0
     
+    global initial_w, initial_h, prob_threshold
+    prob_threshold = args.prob_threshold
     initial_w = cap.get(3)
     initial_h = cap.get(4)
-    prob_threshold = args.prob_threshold
-    temp = 0
-    tk = 0
     
     ### TODO: Load the model through `infer_network` ###
     ### TODO: Handle the input stream ###
@@ -201,7 +171,7 @@ def infer_on_stream(args, client):
             result = infer_network.get_output(cur_request_id)
             
             # Draw Bounting Box
-            frame, current_count, d, tk = draw_outputs(result, frame, initial_w, initial_h, temp, tk)
+            frame, current_count = draw_outputs(frame, result)
             ### current_count, total_count and duration to the MQTT server ###
             ### Topic "person": keys of "count" and "total" ###            
             # Printing Inference Time 
@@ -218,16 +188,7 @@ def infer_on_stream(args, client):
                 duration = int(time.time() - start_time) 
                 client.publish("person/duration", json.dumps({"duration": duration}))
            
-            # Adding overlays to the frame            
-            txt2 = "Distance: %d" %d + " Lost frame: %d" %tk
-            cv2.putText(frame, txt2, (15, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
-            
-            txt2 = "Current count: %d " %current_count
-            cv2.putText(frame, txt2, (15, 45), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
 
-            if current_count > 3:
-                txt2 = "Alert! Maximum count reached"
-                (text_width, text_height) = cv2.getTextSize(txt2, cv2.FONT_HERSHEY_COMPLEX, 0.5, thickness=1)[0]
                 text_offset_x = 10
                 text_offset_y = frame.shape[0] - 10
                 # make the coords of the box with a small padding of two pixels
@@ -240,7 +201,6 @@ def infer_on_stream(args, client):
             client.publish("person", json.dumps({"count": current_count})) # People Count
 
             last_count = current_count
-            temp = d
 
             if key_pressed == 27:
                 break
@@ -270,3 +230,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    exit(0)
