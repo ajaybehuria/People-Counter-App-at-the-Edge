@@ -113,7 +113,7 @@ def infer_on_stream(args, client):
     total_count = 0
     
     # Load the model through `infer_network` 
-    n, c, h, w = infer_network.load_model(model, device", extension)[1]
+    n, c, h, w = infer_network.load_model(model, device, extension)[1]
 
     # Handle the input stream
     if video_file == 'CAM': # Check for live feed
@@ -127,6 +127,9 @@ def infer_on_stream(args, client):
         input_stream = args.input
         assert os.path.isfile(video_file), "Specified input file doesn't exist"
     
+    # Get and open video capture
+    cap = cv2.VideoCapture(video_file)
+    cap.open(video_file)
         
     total_count = 0  
     duration = 0
@@ -157,7 +160,7 @@ def infer_on_stream(args, client):
         ### TODO: Start asynchronous inference for specified request ###
         # Start asynchronous inference for specified request
         inf_start = time.time()
-        infer_network.exec_net(cur_request_id, image)
+        infer_network.async_inference(cur_request_id, image)
         
         color = (255,0,0)
         ### TODO: Wait for the result ###
