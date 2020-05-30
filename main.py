@@ -167,7 +167,7 @@ def infer_on_stream(args, client):
         inf_start = time.time()
         infer_network.async_inference(cur_request_id, image)
         
-        color = (255,0,0)
+        color = (92,23,232)
         ### TODO: Wait for the result ###
         # Wait for the result
         if infer_network.wait(cur_request_id) == 0:
@@ -192,20 +192,20 @@ def infer_on_stream(args, client):
             cv2.putText(frame, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
             
             # Calculate and send relevant information 
-            if frames_undetected > 20 and current_count > last_count and true_count>1: 
-                start_time = time.time
+            if  current_count > last_count : 
+                start_time = time.time()
                 total_count = total_count + current_count - last_count
                 client.publish("person", json.dumps({"total": total_count}))            
             
-            if current_count < last_count: # Average Time
+            if current_count < last_count and int(time.time() - start_time) >2 : # Average Time
                 duration = int(time.time() - start_time) 
                 client.publish("person/duration", json.dumps({"duration": duration}))
            
                  ### Topic "person/duration": key of "duration" ###
             ### TODO: Send the frame to the FFMPEG server ###
             client.publish("person", json.dumps({"count": current_count})) # People Count
-            txt2 = "Lost frame: %d" %frames_undetected
-            cv2.putText(frame, txt2, (15, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
+            txt = "Frames since Last Detection: %d" %frames_undetected
+            cv2.putText(frame, txt, (15, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
             last_count = current_count
 
             if key_pressed == 27:
