@@ -87,7 +87,7 @@ def draw_outputs(frame, result, frames_undetected, true_count):
                 current_count +=1
                 true_count+=1
             else:
-                frames_undetected+=1
+                frames_undetected+=0.01
         return frame, current_count, frames_undetected, true_count
 
 def infer_on_stream(args, client):
@@ -180,8 +180,9 @@ def infer_on_stream(args, client):
             
             # Draw Bounting Box
             frame, current_count, frames_undetected, true_count = draw_outputs(frame, result, frames_undetected, true_count)
-            if true_count >= 1:
+            if true_count > 0:
                 frames_undetected = 0
+                true_count+=1
             if true_count > 1:
                 true_count = 0
             ### current_count, total_count and duration to the MQTT server ###
@@ -191,7 +192,7 @@ def infer_on_stream(args, client):
             cv2.putText(frame, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
             
             # Calculate and send relevant information 
-            if current_count > last_count and frames_undetected > 100: 
+            if frames_undetected > 20 and current_count > last_count and true_count>1: 
                 start_time = time.time
                 total_count = total_count + current_count - last_count
                 client.publish("person", json.dumps({"total": total_count}))            
@@ -203,7 +204,8 @@ def infer_on_stream(args, client):
                  ### Topic "person/duration": key of "duration" ###
             ### TODO: Send the frame to the FFMPEG server ###
             client.publish("person", json.dumps({"count": current_count})) # People Count
-
+            txt2 = "Lost frame: %d" %frames_undetected
+            cv2.putText(frame, txt2, (15, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
             last_count = current_count
 
             if key_pressed == 27:
