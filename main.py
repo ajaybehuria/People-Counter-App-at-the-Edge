@@ -76,7 +76,7 @@ def connect_mqtt():
 
 def draw_outputs(frame, result):
         current_count = 0     
-        for obj in coords[0][0]:
+        for obj in result[0][0]:
             
             if obj[2] > prob_threshold:
                 xmin = int(obj[3] * initial_w)
@@ -191,14 +191,6 @@ def infer_on_stream(args, client):
                 duration = int(time.time() - start_time) 
                 client.publish("person/duration", json.dumps({"duration": duration}))
            
-
-                text_offset_x = 10
-                text_offset_y = frame.shape[0] - 10
-                # make the coords of the box with a small padding of two pixels
-                box_coords = ((text_offset_x, text_offset_y + 2), (text_offset_x + text_width, text_offset_y - text_height - 2))
-                cv2.rectangle(frame, box_coords[0], box_coords[1], (0, 0, 0), cv2.FILLED)
-                
-                cv2.putText(frame, txt2, (text_offset_x, text_offset_y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1)
                  ### Topic "person/duration": key of "duration" ###
             ### TODO: Send the frame to the FFMPEG server ###
             client.publish("person", json.dumps({"count": current_count})) # People Count
