@@ -101,5 +101,5 @@ class Network:
         return res
 
     def clean(self):
-        del self.net_plugin
-        del self.net
+        del self.exec_net
+        del self.network
