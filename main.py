@@ -74,8 +74,8 @@ def connect_mqtt():
     client.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEPALIVE_INTERVAL)
     return client
 
-def draw_outputs(frame, result):
-        current_count = 0     
+def draw_outputs(frame, result, frames_undetected, true_count):
+        current_count = 0  
         for obj in result[0][0]:
             
             if obj[2] > prob_threshold:
@@ -84,7 +84,10 @@ def draw_outputs(frame, result):
                 xmax = int(obj[5] * initial_w)
                 ymax = int(obj[6] * initial_h)
                 cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
-                current_count = current_count + 1
+                current_count +=1
+                true_count+=1
+            else:
+                frames_undetected+=1
         return frame, current_count
 
 def infer_on_stream(args, client):
@@ -111,6 +114,8 @@ def infer_on_stream(args, client):
     cur_request_id = 0
     last_count = 0
     total_count = 0
+    frames_undetected = 0
+    true_count = 0
     
     # Load the model through `infer_network` 
     n, c, h, w = infer_network.load_model(model, device, extension)[1]
@@ -174,7 +179,11 @@ def infer_on_stream(args, client):
             result = infer_network.get_output(cur_request_id)
             
             # Draw Bounting Box
-            frame, current_count = draw_outputs(frame, result)
+            frame, current_count, frames_undetected, true_count = draw_outputs(frame, result, frames_undetected, true_count)
+            if true_count == 1:
+                frames_undetected = 0
+            if true_count > 1:
+                true_count = 0
             ### current_count, total_count and duration to the MQTT server ###
             ### Topic "person": keys of "count" and "total" ###            
             # Printing Inference Time 
@@ -182,8 +191,8 @@ def infer_on_stream(args, client):
             cv2.putText(frame, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
             
             # Calculate and send relevant information 
-            if current_count > last_count: # New entry
-                start_time = time.time()
+            if current_count > last_count & frames_undetected > 20: 
+                start_time = time.time
                 total_count = total_count + current_count - last_count
                 client.publish("person", json.dumps({"total": total_count}))            
             
