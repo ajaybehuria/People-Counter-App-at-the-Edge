@@ -88,7 +88,7 @@ def draw_outputs(frame, result, frames_undetected, true_count):
                 true_count+=1
             else:
                 frames_undetected+=1
-        return frame, current_count
+        return frame, current_count, frames_undetected, true_count
 
 def infer_on_stream(args, client):
     """
@@ -180,7 +180,7 @@ def infer_on_stream(args, client):
             
             # Draw Bounting Box
             frame, current_count, frames_undetected, true_count = draw_outputs(frame, result, frames_undetected, true_count)
-            if true_count == 1:
+            if true_count >= 1:
                 frames_undetected = 0
             if true_count > 1:
                 true_count = 0
@@ -191,7 +191,7 @@ def infer_on_stream(args, client):
             cv2.putText(frame, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
             
             # Calculate and send relevant information 
-            if current_count > last_count & frames_undetected > 20: 
+            if current_count > last_count and frames_undetected > 100: 
                 start_time = time.time
                 total_count = total_count + current_count - last_count
                 client.publish("person", json.dumps({"total": total_count}))            
