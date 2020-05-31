@@ -43,7 +43,9 @@ In investigating potential people counter models, I tried out different models t
   
   - Then to extract contents I used tar-xvf
   
-  - I converted the model to an Intermediate Representation with the following arguments python /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --input_model frozen_inference_graph.pb --tensorflow_object_detection_api_pipeline_config pipeline.config --reverse_input_channels --tensorflow_use_custom_operations_config
+  - I converted the model to an Intermediate Representation with the following arguments:
+  
+python /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --input_model frozen_inference_graph.pb --tensorflow_object_detection_api_pipeline_config pipeline.config --reverse_input_channels --tensorflow_use_custom_operations_config /opt/intel/openvino/deployment_tools/model_optimizer/extensions/front/tf/ssd_v2_support.json
   
   - The model was insufficient for the app because of the unsupported layers, it also sometimes double-counted due to the limited accuracy
   
